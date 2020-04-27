@@ -210,59 +210,6 @@ public class TeraSort extends Configured implements Tool {
 
     }
 
-    /**
-     * A total order partitioner that assigns keys based on their first
-     * PREFIX_LENGTH bytes, assuming a flat distribution.
-     */
-    public static class SimplePartitioner extends Partitioner<Text, Text>
-            implements Configurable {
-        int prefixesPerReduce;
-        private static final int PREFIX_LENGTH = 3;
-        private Configuration conf = null;
-        public void setConf(Configuration conf) {
-            this.conf = conf;
-            prefixesPerReduce = (int) Math.ceil((1 << (8 * PREFIX_LENGTH)) /
-                    (float) conf.getInt(MRJobConfig.NUM_REDUCES, 1));
-        }
-
-        public Configuration getConf() {
-            return conf;
-        }
-
-        @Override
-        public int getPartition(Text key, Text value, int numPartitions) {
-            byte[] bytes = key.getBytes();
-            int len = Math.min(PREFIX_LENGTH, key.getLength());
-            int prefix = 0;
-            for(int i=0; i < len; ++i) {
-                prefix = (prefix << 8) | (0xff & bytes[i]);
-            }
-            return prefix / prefixesPerReduce;
-        }
-    }
-
-    public static boolean getUseSimplePartitioner(JobContext job) {
-        return job.getConfiguration().getBoolean(
-                TeraSortConfigKeys.USE_SIMPLE_PARTITIONER.key(),
-                TeraSortConfigKeys.DEFAULT_USE_SIMPLE_PARTITIONER);
-    }
-
-    public static void setUseSimplePartitioner(Job job, boolean value) {
-        job.getConfiguration().setBoolean(
-                TeraSortConfigKeys.USE_SIMPLE_PARTITIONER.key(), value);
-    }
-
-    public static int getOutputReplication(JobContext job) {
-        return job.getConfiguration().getInt(
-                TeraSortConfigKeys.OUTPUT_REPLICATION.key(),
-                TeraSortConfigKeys.DEFAULT_OUTPUT_REPLICATION);
-    }
-
-    public static void setOutputReplication(Job job, int value) {
-        job.getConfiguration().setInt(TeraSortConfigKeys.OUTPUT_REPLICATION.key(),
-                value);
-    }
-
     private static void usage() throws IOException {
         System.err.println("Usage: terasort [-Dproperty=value] <in> <out>");
         System.err.println("TeraSort configurations are:");
@@ -283,7 +230,6 @@ public class TeraSort extends Configured implements Tool {
         Job job = Job.getInstance(getConf());
         Path inputDir = new Path(args[0]);
         Path outputDir = new Path(args[1]);
-        boolean useSimplePartitioner = getUseSimplePartitioner(job);
         TeraInputFormat.setInputPaths(job, inputDir);
         FileOutputFormat.setOutputPath(job, outputDir);
         job.setJobName("TeraSort");
@@ -292,27 +238,23 @@ public class TeraSort extends Configured implements Tool {
         job.setOutputValueClass(Text.class);
         job.setInputFormatClass(TeraInputFormat.class);
         job.setOutputFormatClass(TeraOutputFormat.class);
-        if (useSimplePartitioner) {
-            job.setPartitionerClass(SimplePartitioner.class);
-        } else {
-            long start = System.currentTimeMillis();
-            Path partitionFile = new Path(outputDir,
-                    TeraInputFormat.PARTITION_FILENAME);
-            URI partitionUri = new URI(partitionFile.toString() +
-                    "#" + TeraInputFormat.PARTITION_FILENAME);
-            try {
-                TeraInputFormat.writePartitionFile(job, partitionFile);
-            } catch (Throwable e) {
-                LOG.error("{}", e.getMessage(), e);
-                return -1;
-            }
-            job.addCacheFile(partitionUri);
-            long end = System.currentTimeMillis();
-            System.out.println("Spent " + (end - start) + "ms computing partitions.");
-            job.setPartitionerClass(TotalOrderPartitioner.class);
-        }
 
-        job.getConfiguration().setInt("dfs.replication", getOutputReplication(job));
+        long start = System.currentTimeMillis();
+        Path partitionFile = new Path(outputDir,
+                TeraInputFormat.PARTITION_FILENAME);
+        URI partitionUri = new URI(partitionFile.toString() +
+                "#" + TeraInputFormat.PARTITION_FILENAME);
+        try {
+            TeraInputFormat.writePartitionFile(job, partitionFile);
+        } catch (Throwable e) {
+            LOG.error("{}", e.getMessage(), e);
+            return -1;
+        }
+        job.addCacheFile(partitionUri);
+        long end = System.currentTimeMillis();
+        System.out.println("Spent " + (end - start) + "ms computing partitions.");
+        job.setPartitionerClass(TotalOrderPartitioner.class);
+
         int ret = job.waitForCompletion(true) ? 0 : 1;
         LOG.info("done");
         return ret;

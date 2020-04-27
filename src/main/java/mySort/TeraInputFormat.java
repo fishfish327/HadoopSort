@@ -254,25 +254,5 @@ public class TeraInputFormat extends FileInputFormat<Text,Text> {
             throws IOException {
         return new TeraRecordReader();
     }
-    @Override
-    public List<InputSplit> getSplits(JobContext job) throws IOException {
-        if (job == lastContext) {
-            return lastResult;
-        }
-        long t1, t2, t3;
-        t1 = System.currentTimeMillis();
-        lastContext = job;
-        lastResult = super.getSplits(job);
-        t2 = System.currentTimeMillis();
-        System.out.println("Spent " + (t2 - t1) + "ms computing base-splits.");
-        if (job.getConfiguration().getBoolean(TeraSortConfigKeys.USE_TERA_SCHEDULER.key(),
-                TeraSortConfigKeys.DEFAULT_USE_TERA_SCHEDULER)) {
-            TeraScheduler scheduler = new TeraScheduler(
-                    lastResult.toArray(new FileSplit[0]), job.getConfiguration());
-            lastResult = scheduler.getNewFileSplits();
-            t3 = System.currentTimeMillis();
-            System.out.println("Spent " + (t3 - t2) + "ms computing TeraScheduler splits.");
-        }
-        return lastResult;
-    }
+
 }

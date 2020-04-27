@@ -108,10 +108,6 @@ public class TeraOutputFormat extends FileOutputFormat<Text,Text> {
                 empty =
                         !st.isDirectory() && TeraInputFormat.PARTITION_FILENAME.equals(fname);
             }
-            if (TeraSort.getUseSimplePartitioner(job) || !empty) {
-                throw new FileAlreadyExistsException("Output directory " + outDir
-                        + " already exists");
-            }
         } catch (FileNotFoundException ignored) {
         }
     }

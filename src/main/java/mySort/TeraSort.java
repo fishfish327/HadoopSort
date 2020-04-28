@@ -41,6 +41,7 @@ public class TeraSort extends Configured implements Tool {
             usage();
             return 2;
         }
+        long startTime = System.currentTimeMillis();
         LOG.info("starting");
         Job job = Job.getInstance(getConf());
         Path inputDir = new Path(args[0]);
@@ -85,6 +86,8 @@ public class TeraSort extends Configured implements Tool {
 
         int ret = job.waitForCompletion(true) ? 0 : 1;
         LOG.info("done");
+        long endTime = System.currentTimeMillis();
+        System.out.println("Time taken: " + (endTime - startTime));
         return ret;
     }
 

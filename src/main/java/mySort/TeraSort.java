@@ -8,6 +8,8 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.compress.CompressionCodec;
+import org.apache.hadoop.io.compress.GzipCodec;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.KeyValueTextInputFormat;
@@ -91,11 +93,18 @@ public class TeraSort extends Configured implements Tool {
         return ret;
     }
 
+    public static Configuration setCompressConfig(){
+        Configuration conf = new Configuration();
+        conf.setBoolean("mapred.compress.map.output", true);
+        conf.setClass("mapred.map.output.compression.codec", GzipCodec.class, CompressionCodec.class);
+
+        return conf;
+    }
     /**
      * @param args
      */
     public static void main(String[] args) throws Exception {
-        int res = ToolRunner.run(new Configuration(), new TeraSort(), args);
+        int res = ToolRunner.run(setCompressConfig(), new TeraSort(), args);
         System.exit(res);
     }
 

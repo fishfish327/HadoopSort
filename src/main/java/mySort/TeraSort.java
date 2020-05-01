@@ -59,7 +59,7 @@ public class TeraSort extends Configured implements Tool {
         job.setReducerClass(MySortReducer.class);
 
         // Setup Partitioner
-        Path partitionFile = new Path(inputDir, "partition");
+        Path partitionFile = new Path("/home/", "partition");
         TotalOrderPartitioner.setPartitionFile(job.getConfiguration(), partitionFile);
         job.setPartitionerClass(TotalOrderPartitioner.class);
 
@@ -95,8 +95,8 @@ public class TeraSort extends Configured implements Tool {
 
     public static Configuration setCompressConfig(){
         Configuration conf = new Configuration();
-        conf.setBoolean("mapred.compress.map.output", true);
-        conf.setClass("mapred.map.output.compression.codec", GzipCodec.class, CompressionCodec.class);
+       // conf.setBoolean("mapred.compress.map.output", true);
+       // conf.setClass("mapred.map.output.compression.codec", GzipCodec.class, CompressionCodec.class);
 
         return conf;
     }
